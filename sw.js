@@ -3,7 +3,7 @@
  * لو نشرت نسخة جديدة، غيّر رقم CACHE_VERSION.
  */
 
-const CACHE_VERSION = 'hurouf-v1';
+const CACHE_VERSION = 'hurouf-v2';
 
 const APP_SHELL = [
   './',
@@ -45,8 +45,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // صفحات التنقل: الكاش الأول، ولو مش موجودة نجيب من الشبكة
+  // صفحات التنقل: جوه اللعبة نفسها بس (الجذر أو index.html).
+  // أي ملف تاني (زي qr/hurouf-qr.png أو ملف PDF) يروح للشبكة عادي.
   if (request.mode === 'navigate') {
+    const isAppPage = url.pathname.endsWith('/') || url.pathname.endsWith('/index.html');
+    if (!isAppPage) return;
+
     event.respondWith(
       (async () => {
         const cached = await caches.match('./index.html');
