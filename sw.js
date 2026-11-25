@@ -1,9 +1,13 @@
 /* حروفي — Service Worker
  * كل حاجة محلية: بعد أول زيارة اللعبة تشتغل بدون إنترنت.
- * لو نشرت نسخة جديدة، غيّر رقم CACHE_VERSION.
+ * ملحوظة: اللعبتين على نفس الدومين (github.io)، فكل لعبة ليها بادئة كاش خاصة
+ * عشان ميمسحوش كاش بعض.
  */
 
-const CACHE_VERSION = 'hurouf-v3';
+const CACHE_PREFIX = 'hurouf1-';
+const CACHE_VERSION = `${CACHE_PREFIX}v4`;
+// أسماء كاش قديمة من نسخ سابقة (قبل ما نفصل بادئة كل لعبة)
+const LEGACY_CACHES = ['hurouf-v1', 'hurouf-v2', 'hurouf-v3'];
 
 const APP_SHELL = [
   './',
@@ -48,7 +52,15 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)))
+        Promise.all(
+          keys
+            // بنمسح كاش النسخ القديمة بتاعت اللعبة دي بس — مش كاش اللعبة التانية
+            .filter(
+              (key) =>
+                key !== CACHE_VERSION && (key.startsWith(CACHE_PREFIX) || LEGACY_CACHES.includes(key))
+            )
+            .map((key) => caches.delete(key))
+        )
       )
       .then(() => self.clients.claim())
   );
@@ -69,7 +81,7 @@ self.addEventListener('fetch', (event) => {
 
     event.respondWith(
       (async () => {
-        const cached = await caches.match('./index.html');
+        const cached = await (await caches.open(CACHE_VERSION)).match('./index.html');
         if (cached) return cached;
         try {
           return await fetch(request);
@@ -86,12 +98,12 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      const cached = await caches.match(request);
+      const cache = await caches.open(CACHE_VERSION);
+      const cached = await cache.match(request);
       if (cached) return cached;
       try {
         const response = await fetch(request);
         if (response && response.ok) {
-          const cache = await caches.open(CACHE_VERSION);
           cache.put(request, response.clone());
         }
         return response;
